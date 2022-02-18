@@ -158,7 +158,7 @@
       };
     },
     mounted() {
-      axios.get("https://od.moi.gov.tw/api/v1/rest/datastore/301000000A-000082-041").then((response) => {
+      axios.get("js/data.json").then((response) => {
         response.input = { site_id: null };
         this.info = response;
       });
