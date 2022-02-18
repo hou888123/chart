@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh_tw">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="keywords" content="108,戶數,人口,戶別,性別,政府,資料" />
+    <meta name="description" content="108戶數、人口數按戶別及性別" />
+    <title>108戶數、人口數按戶別及性別</title>
+    <link
+      rel="Shortcut Icon"
+      type="image/x-icon"
+      href="images/taipeilogo.png"
+    />
+    <link type="text/css" rel="stylesheet" href="css/index.css" />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.js"
+      integrity="sha512-pSyYzOKCLD2xoGM1GwkeHbdXgMRVsSqQaaUoHskx/HF09POwvow2VfVEdARIYwdeFLbu+2FCOTRYuiyeGxXkEg=="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.0.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="left">
+        <div class="logo"><img src="images/taipeilogo.png" /></div>
+        <p>108年人口戶數及性別</p>
+        <div class="select_area">
+          <span>地區</span>
+          <select v-model="info.input.site_id" @change="onChange($event)">
+            <option disabled selected :value="null">請選擇</option>
+            <option v-for="item in menulist.sort">{{item}}</option>
+          </select>
+        </div>
+      </div>
+      <div class="content">
+        <div class="select_area">
+          <span>地區</span>
+          <select v-model="info.input.site_id" @change="onChange($event)">
+            <option disabled selected :value="null">請選擇</option>
+            <option v-for="item in menulist.sort">{{item}}</option>
+          </select>
+        </div>
+        <div class="chart_area">
+          <canvas id="myChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+<script>
+  window.addEventListener(
+    "resize",
+    function (event) {
+      if (window.innerWidth <= 481) {
+        myChart.config.options.aspectRatio = 1;
+      } else {
+        myChart.config.options.aspectRatio = 2;
+      }
+      myChart.update();
+    },
+    true
+  );
+  let myChart;
+  window.onload = function () {
+    const labels = ["共同生活戶", "獨立生活戶"];
+    const data = {
+      labels: labels,
+      datasets: [
+        {
+          label: "男",
+          backgroundColor: "#5e7d9c",
+          data: [0, 0],
+          datalabels: {
+            color: "#761b1f",
+            font: {
+              size: 18,
+              weight: 500,
+            },
+            anchor: "end",
+            align: "top",
+            offset: -2,
+          },
+          barPercentage: 0.4,
+        },
+        {
+          label: "女",
+          backgroundColor: "#f36094",
+          data: [0, 0],
+          datalabels: {
+            color: "#761b1f",
+            font: {
+              size: 18,
+              weight: 500,
+            },
+            anchor: "end",
+            align: "top",
+            offset: -2,
+          },
+          barPercentage: 0.4,
+        },
+      ],
+    };
+
+    const config = {
+      type: "bar",
+      data: data,
+      plugins: [ChartDataLabels],
+      options: {
+        aspectRatio: window.innerWidth <= 481 ? 1 : 2,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              boxWidth: 22,
+              boxHeight: 22,
+              color: "#777",
+              font: {
+                size: 18,
+                weight: 600,
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#777",
+              font: {
+                size: 20,
+                weight: 550,
+              },
+            },
+          },
+          y: {
+            ticks: {
+              color: "#777",
+              font: {
+                size: 20,
+                weight: 500,
+              },
+            },
+          },
+        },
+      },
+    };
+    myChart = new Chart(document.getElementById("myChart"), config);
+  };
+  new Vue({
+    el: ".container",
+    data() {
+      return {
+        info: null,
+      };
+    },
+    mounted() {
+      axios.get("js/data.json").then((response) => {
+        response.input = { site_id: null };
+        this.info = response;
+      });
+    },
+    methods: {
+      onChange(event) {
+        console.log(event.target.value);
+        let household_ordinary_m_total = 0; //共同生活戶_男
+        let household_ordinary_f_total = 0; //共同生活戶_女
+        let household_single_m_total = 0; //獨立生活戶_男
+        let household_single_f_total = 0; //獨立生活戶_女
+        let set = new Set();
+        let result = this.info.data.result.records.filter((item) =>
+          item.site_id == event.target.value ? set.add(item.site_id) : false
+        );
+        result.forEach(function (index, i) {
+          household_ordinary_m_total += parseInt(index.household_ordinary_m);
+          household_ordinary_f_total += parseInt(index.household_ordinary_f);
+          household_single_m_total += parseInt(index.household_single_m);
+          household_single_f_total += parseInt(index.household_single_f);
+        });
+        myChart.data.datasets[0].data[0] = household_ordinary_m_total;
+        myChart.data.datasets[0].data[1] = household_single_m_total;
+
+        myChart.data.datasets[1].data[0] = household_ordinary_f_total;
+        myChart.data.datasets[1].data[1] = household_single_f_total;
+        myChart.update();
+      },
+    },
+    computed: {
+      menulist() {
+        let obj = {
+          sort: [],
+          household_ordinary_m: {},
+        };
+        this.info.data.result.records.forEach(
+          ({ site_id, household_ordinary_m }, index) => {
+            if (index > 0) {
+              if (!obj.household_ordinary_m[site_id]) {
+                obj.sort.push(site_id);
+                obj.household_ordinary_m[site_id] = [];
+              }
+              obj.household_ordinary_m[site_id].push(household_ordinary_m);
+            }
+          }
+        );
+        return obj;
+      },
+    },
+  });
+</script>
